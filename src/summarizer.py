@@ -1,61 +1,91 @@
 import os
-import torch
-from transformers import BertModel, BertTokenizer
-from sklearn.metrics.pairwise import cosine_similarity
-import numpy as np
-import openai
-from dotenv import load_dotenv
+import logging
 from openai import OpenAI
+from dotenv import load_dotenv
 
+# 設置日誌記錄
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
+# 創建一個控制台處理器
+console_handler = logging.StreamHandler()
+console_handler.setLevel(logging.INFO)
+
+# 創建一個格式化器
+formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+console_handler.setFormatter(formatter)
+
+# 將處理器添加到日誌記錄器
+logger.addHandler(console_handler)
+
+# 載入環境變量
 load_dotenv()
 OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
+
+if not OPENAI_API_KEY:
+    logger.error("OPENAI_API_KEY not found in environment variables.")
+    raise ValueError("OPENAI_API_KEY is not set")
+
 client = OpenAI()
 
-# BERT Extractive Summarization
-class BertSummarizer:
-    def __init__(self, model_name="bert-base-chinese"):
-        self.model = BertModel.from_pretrained(model_name)
-        self.tokenizer = BertTokenizer.from_pretrained(model_name)
-        self.model.eval()
+class GPT4Summarizer:
+    def __init__(self):
+        logger.info("Initializing GPT-4 Summarizer")
+        self.user_prompt_path = "src/prompts/user_prompt.txt"
+        self.load_user_prompt()
 
-    def summarize(self, text, num_sentences=3):
-        sentences = text.split('。')
-        embeddings = self._get_embeddings(sentences)
-        sentence_scores = self._get_sentence_scores(embeddings)
-        summary = self._get_summary(sentences, sentence_scores, num_sentences)
-        return summary
+    def load_user_prompt(self):
+        logger.info(f"Loading user prompt from {self.user_prompt_path}")
+        try:
+            with open(self.user_prompt_path, "r") as file:
+                self.user_prompt = file.read()
+            logger.info("User prompt loaded successfully")
+        except FileNotFoundError:
+            logger.error(f"User prompt file not found: {self.user_prompt_path}")
+            raise
+        except IOError as e:
+            logger.error(f"Error reading user prompt file: {str(e)}")
+            raise
 
-    def _get_embeddings(self, sentences):
-        embeddings = []
-        for sentence in sentences:
-            inputs = self.tokenizer(sentence, return_tensors="pt", truncation=True, padding=True, max_length=512)
-            with torch.no_grad():
-                outputs = self.model(**inputs)
-            embeddings.append(outputs.last_hidden_state.mean(dim=1).squeeze().numpy())
-        return np.array(embeddings)
+    def summarize_with_gpt4(self, transcript):
+        logger.info("Starting GPT-4 summarization process")
+        logger.info(f"Transcript length: {len(transcript)} characters")
 
-    def _get_sentence_scores(self, embeddings):
-        centroid = embeddings.mean(axis=0)
-        scores = cosine_similarity([centroid], embeddings)[0]
-        return scores
+        try:
+            logger.info("Sending request to OpenAI API")
+            response = client.chat.completions.create(
+                model="gpt-4o-mini",
+                messages=[
+                    {"role": "system", "content": "You are a helpful assistant."},
+                    {"role": "user", "content": self.user_prompt + transcript},    
+                ],
+                temperature=0.2
+            )
+            logger.info("Received response from OpenAI API")
 
-    def _get_summary(self, sentences, scores, num_sentences):
-        ranked_sentences = [sentences[i] for i in np.argsort(scores)[-num_sentences:]]
-        return '。'.join(ranked_sentences)
+            summary = response.choices[0].message.content
+            logger.info(f"Summary generated. Length: {len(summary)} characters")
+            return summary
 
-# OpenAI GPT-4 Summarization
-openai.api_key = OPENAI_API_KEY
+        except Exception as e:
+            logger.error(f"Error during GPT-4 summarization: {str(e)}")
+            raise
 
-def summarize_with_gpt4(text):
+def summarize_text(text, method="gpt-4"):
+    logger.info(f"Starting summarization using method: {method}")
 
-    response = client.chat.completions.create(
-    model="gpt-4o",
-    messages=[
-        {"role": "system", "content": "You are a helpful assistant."},
-        {"role": "user", "content": "請以繁體中文總結以下文本：\n" + text},    
-        ],
-    temperature=0.7
-    )
+    if method == "gpt-4":
+        summarizer = GPT4Summarizer()
+        summary = summarizer.summarize_with_gpt4(text)
+    else:
+        logger.error(f"Unsupported summarization method: {method}")
+        raise ValueError(f"Unsupported summarization method: {method}")
 
-    summary = response.choices[0].message.content
+    logger.info("Summarization completed")
     return summary
+
+if __name__ == "__main__":
+    # 測試代碼
+    test_text = "這是一個測試文本，用於演示摘要功能。" * 50
+    summary = summarize_text(test_text)
+    logger.info(f"Summary preview: {summary[:200]}...")  # 顯示前200個字符作為預覽

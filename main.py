@@ -1,56 +1,67 @@
 import os
-from src.downloader import download_video
-from src.converter import video_to_audio
+from dotenv import load_dotenv
+from src.downloader import download_audio
 from src.transcriber import audio_to_text
-from src.organizer import organize_files
-from src.summarizer import BertSummarizer, summarize_with_gpt4
-from config.settings import DOWNLOAD_PATH, AUDIO_PATH, SUMMARY_PATH
+from src.summarizer import GPT4Summarizer
+from config.settings import AUDIO_PATH, SUMMARY_PATH, TRANSCRIPT_PATH
 
-def generate_file_name(url):
-    video_id = url.split('v=')[1].split('&')[0]
-    return video_id
+load_dotenv()
 
-def process_video(url):
-    video_path = download_video(url)
-    audio_path = video_to_audio(video_path)
-    transcript = audio_to_text(audio_path)
-    organize_files(video_path, audio_path, transcript)
-    file_name = generate_file_name(url)
-    return transcript, audio_path, file_name
+class VideoProcessor:
+    def __init__(self, url):
+        self.url = url
+        self.audio_path = None
+        self.transcript = None
+        self.summary = None
+        self.openai_summarizer = GPT4Summarizer()
 
-def summarize_transcript(transcript, method="bert", num_sentences=3):
-    if method == "bert":
-        summarizer = BertSummarizer()
-        summary = summarizer.summarize(transcript, num_sentences=num_sentences)
-    elif method == "gpt-4":
-        summary = summarize_with_gpt4(transcript)
-    else:
-        raise ValueError("Invalid summarization method. Choose 'bert' or 'gpt-4'.")
-    return summary
+    def download_and_convert(self):
+        os.makedirs(AUDIO_PATH, exist_ok=True)
+        self.audio_path = download_audio(self.url, AUDIO_PATH)
+        print(f"Audio downloaded and saved to: {self.audio_path}")
 
-def save_summary(summary, file_name):
-    summary_path = os.path.join(SUMMARY_PATH, f"{file_name}_summary.txt")
-    with open(summary_path, 'w', encoding='utf-8') as file:
-        file.write(summary)
-    print(f"Summary saved to {summary_path}")
+    def transcribe(self):
+        if not self.audio_path:
+            raise ValueError("Audio hasn't been downloaded yet. Call download_and_convert() first.")
+        self.transcript = audio_to_text(self.audio_path)
+        print("Audio transcription completed.")
 
-def main(url=None, transcript_path=None, method="bert"):
-    if url:
-        transcript, audio_path, file_name = process_video(url)
-    elif transcript_path:
-        with open(transcript_path, 'r', encoding='utf-8') as file:
-            transcript = file.read()
-        audio_path = os.path.splitext(transcript_path)[0]
-        file_name = os.path.basename(audio_path)
-    else:
-        raise ValueError("Either a URL or a transcript file path must be provided.")
-    
-    summary = summarize_transcript(transcript, method=method)
-    save_summary(summary, file_name)
+    def summarize(self, method="gpt-4", num_sentences=3):
+        if not self.transcript:
+            raise ValueError("Transcript hasn't been generated yet. Call transcribe() first.")
+        
+        if method == "gpt-4":
+            self.summary = self.openai_summarizer.summarize_with_gpt4(self.transcript)
+            print("GPT-4 summarization completed.")
+        else:
+            raise ValueError("Invalid summarization method. Choose 'bert' or 'gpt-4'.")
+
+    def save_transcript(self, filename="transcript.txt"):
+        if not self.transcript:
+            raise ValueError("Transcript hasn't been generated yet. Call transcribe() first.")
+        os.makedirs(TRANSCRIPT_PATH, exist_ok=True)
+        output_path = os.path.join(TRANSCRIPT_PATH, filename)
+        with open(output_path, 'w', encoding='utf-8') as f:
+            f.write(self.transcript)
+        print(f"Transcript saved to: {output_path}")
+
+    def save_summary(self, filename="summary.txt"):
+        if not self.summary:
+            raise ValueError("Summary hasn't been generated yet. Call summarize() first.")
+        os.makedirs(SUMMARY_PATH, exist_ok=True)
+        output_path = os.path.join(SUMMARY_PATH, filename)
+        with open(output_path, 'w', encoding='utf-8') as f:
+            f.write(self.summary)
+        print(f"Summary saved to: {output_path}")
+
+def main():
+    video_url = "https://www.youtube.com/watch?v=AHlu9tcz_Zc&ab_channel=%E7%AA%AE%E5%A5%A2%E6%A5%B5%E6%AC%B2"
+    processor = VideoProcessor(video_url)
+    processor.download_and_convert()
+    processor.transcribe()
+    processor.save_transcript()
+    processor.summarize(method="gpt-4")
+    processor.save_summary()
 
 if __name__ == '__main__':
-    # 提供 YouTube 視頻 URL 或轉錄文本文件路徑來運行
-    video_url = "https://www.youtube.com/watch?v=_5jQayO-MQY&ab_channel=MervinPraison"  # 替換為實際 URL
-    
-    main(url=video_url, method="gpt-4")  # 使用 GPT-4 進行摘要
-    # main(url=video_url, method="bert")  # 使用 BERT 進行摘要
+    main()
