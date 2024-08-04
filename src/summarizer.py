@@ -31,7 +31,7 @@ client = OpenAI()
 class GPT4Summarizer:
     def __init__(self):
         logger.info("Initializing GPT-4 Summarizer")
-        self.user_prompt_path = "src/prompts/user_prompt.txt"
+        self.user_prompt_path = "src/prompts/summary.txt"
         self.load_user_prompt()
 
     def load_user_prompt(self):
@@ -50,6 +50,7 @@ class GPT4Summarizer:
     def summarize_with_gpt4(self, transcript):
         logger.info("Starting GPT-4 summarization process")
         logger.info(f"Transcript length: {len(transcript)} characters")
+        language_prompt = "請你將你的總結，以繁體中文 language:zh-tw\n 輸出"
 
         try:
             logger.info("Sending request to OpenAI API")
@@ -57,7 +58,7 @@ class GPT4Summarizer:
                 model="gpt-4o-mini",
                 messages=[
                     {"role": "system", "content": "You are a helpful assistant."},
-                    {"role": "user", "content": self.user_prompt + transcript},    
+                    {"role": "user", "content": self.user_prompt + language_prompt + "transcript:" + transcript},    
                 ],
                 temperature=0.2
             )
