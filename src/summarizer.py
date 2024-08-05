@@ -31,7 +31,7 @@ client = OpenAI()
 class GPT4Summarizer:
     def __init__(self):
         logger.info("Initializing GPT-4 Summarizer")
-        self.user_prompt_path = "src/prompts/summary.txt"
+        self.user_prompt_path = "src/prompts/summary2.txt"
         self.load_user_prompt()
 
     def load_user_prompt(self):
