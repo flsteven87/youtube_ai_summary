@@ -7,23 +7,25 @@ from config.settings import AUDIO_PATH
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-# 創建一個控制台處理器
-console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.INFO)
+# 檢查是否已經添加了處理器
+if not logger.handlers:
+    # 創建一個控制台處理器
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
 
-# 創建一個格式化器
-formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-console_handler.setFormatter(formatter)
+    # 創建一個格式化器
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    console_handler.setFormatter(formatter)
 
-# 將處理器添加到日誌記錄器
-logger.addHandler(console_handler)
+    # 將處理器添加到日誌記錄器
+    logger.addHandler(console_handler)
 
-def download_audio(url, audio_path=AUDIO_PATH):
+def download_audio(url, audio_path=AUDIO_PATH, video_name=None):
     logger.info(f"Starting download process for URL: {url}")
 
     ydl_opts = {
         'format': 'bestaudio/best',
-        'outtmpl': os.path.join(audio_path, '%(title)s.%(ext)s'),
+        'outtmpl': os.path.join(audio_path, f'{video_name}.%(ext)s'),
         'postprocessors': [{
             'key': 'FFmpegExtractAudio',
             'preferredcodec': 'mp3',
@@ -36,9 +38,8 @@ def download_audio(url, audio_path=AUDIO_PATH):
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             logger.info("Extracting video information...")
-            info = ydl.extract_info(url, download=True)
-            filename = ydl.prepare_filename(info)
-            final_filename = os.path.splitext(filename)[0] + '.mp3'
+            ydl.download([url])
+            final_filename = os.path.join(audio_path, f'{video_name}.mp3')
             logger.info(f"Download completed. File saved as: {final_filename}")
             return final_filename
     except Exception as e:

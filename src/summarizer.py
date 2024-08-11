@@ -5,18 +5,15 @@ from dotenv import load_dotenv
 
 # 設置日誌記錄
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
 
-# 創建一個控制台處理器
-console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.INFO)
-
-# 創建一個格式化器
-formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-console_handler.setFormatter(formatter)
-
-# 將處理器添加到日誌記錄器
-logger.addHandler(console_handler)
+# 只在 logger 沒有處理器時添加處理器
+if not logger.handlers:
+    logger.setLevel(logging.INFO)
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+    console_handler.setFormatter(formatter)
+    logger.addHandler(console_handler)
 
 # 載入環境變量
 load_dotenv()
@@ -29,9 +26,10 @@ if not OPENAI_API_KEY:
 client = OpenAI()
 
 class GPT4Summarizer:
-    def __init__(self):
-        logger.info("Initializing GPT-4 Summarizer")
-        self.user_prompt_path = "src/prompts/summary2.txt"
+    def __init__(self, summary_method):
+        logger.info(f"Initializing GPT-4 Summarizer with method: {summary_method}")
+        self.summary_method = summary_method
+        self.user_prompt_path = f"src/prompts/{summary_method}_summary.txt"
         self.load_user_prompt()
 
     def load_user_prompt(self):
@@ -72,11 +70,11 @@ class GPT4Summarizer:
             logger.error(f"Error during GPT-4 summarization: {str(e)}")
             raise
 
-def summarize_text(text, method="gpt-4"):
+def summarize_text(text, method="executive"):
     logger.info(f"Starting summarization using method: {method}")
 
-    if method == "gpt-4":
-        summarizer = GPT4Summarizer()
+    if method in ["executive", "detailed", "brief"]:
+        summarizer = GPT4Summarizer(method)
         summary = summarizer.summarize_with_gpt4(text)
     else:
         logger.error(f"Unsupported summarization method: {method}")
@@ -88,5 +86,5 @@ def summarize_text(text, method="gpt-4"):
 if __name__ == "__main__":
     # 測試代碼
     test_text = "這是一個測試文本，用於演示摘要功能。" * 50
-    summary = summarize_text(test_text)
+    summary = summarize_text(test_text, method="executive")
     logger.info(f"Summary preview: {summary[:200]}...")  # 顯示前200個字符作為預覽
