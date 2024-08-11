@@ -14,6 +14,9 @@ if not logger.handlers:
     formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
     console_handler.setFormatter(formatter)
     logger.addHandler(console_handler)
+else:
+    # 如果已經有處理器，確保日誌級別是正確的
+    logger.setLevel(logging.INFO)
 
 # 載入環境變量
 load_dotenv()

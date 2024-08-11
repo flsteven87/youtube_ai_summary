@@ -33,6 +33,8 @@ class VideoProcessor:
                 video_title = video_title.replace(" - YouTube", "").strip()
                 # 將標題轉為有效的文件名
                 video_name = re.sub(r'[^\w\-_\. ]', '_', video_title)
+                # 去除末尾的底線
+                video_name = video_name.rstrip('_')
                 return video_name
             else:
                 return "unknown_video"

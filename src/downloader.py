@@ -3,22 +3,7 @@ import os
 import logging
 from config.settings import AUDIO_PATH
 
-# 設置日誌記錄
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-
-# 檢查是否已經添加了處理器
-if not logger.handlers:
-    # 創建一個控制台處理器
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.INFO)
-
-    # 創建一個格式化器
-    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-    console_handler.setFormatter(formatter)
-
-    # 將處理器添加到日誌記錄器
-    logger.addHandler(console_handler)
 
 def download_audio(url, audio_path=AUDIO_PATH, video_name=None):
     logger.info(f"Starting download process for URL: {url}")

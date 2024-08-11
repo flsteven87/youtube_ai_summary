@@ -2,20 +2,7 @@ import os
 import logging
 from pydub import AudioSegment
 
-# 設置日誌記錄
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.INFO)
-
-# 創建一個控制台處理器
-console_handler = logging.StreamHandler()
-console_handler.setLevel(logging.INFO)
-
-# 創建一個格式化器
-formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
-console_handler.setFormatter(formatter)
-
-# 將處理器添加到日誌記錄器
-logger.addHandler(console_handler)
 
 def split_audio(audio_path, max_duration_seconds=600, output_format="mp3"):
     logger.info(f"Starting to split audio file: {audio_path}")

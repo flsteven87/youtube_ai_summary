@@ -8,7 +8,6 @@ from openai import OpenAI
 from openai.types.audio import Transcription
 
 # 設置日誌記錄
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 load_dotenv()

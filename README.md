@@ -82,6 +82,4 @@ This project is licensed under the MIT License. See the `LICENSE` file for detai
 
 ## Contact
 
-Your Name - flsteven87@gmail.com
-
-Project Link: [https://github.com/flsteven87/youtube_ai_summary](https://github.com/flsteven87/youtube_ai_summary)
+Email - flsteven87@gmail.com
