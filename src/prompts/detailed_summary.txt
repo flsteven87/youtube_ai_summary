@@ -47,10 +47,10 @@ Use the following Markdown format for your summary:
 ### [Main Content]
 #### [Section 1 Title]
 [Topic sentence introducing the section's main idea]
-• [Important concept or argument]
-• [Relevant numerical data or statistic]
-• [Significant example or case study]
-• [Notable quote or statement]
+- [Important concept or argument]\n
+- [Relevant numerical data or statistic]\n
+- [Significant example or case study]\n
+- [Notable quote or statement]\n
 [Brief concluding sentence tying the section to the overall theme]
 
 #### [Section 2 Title]

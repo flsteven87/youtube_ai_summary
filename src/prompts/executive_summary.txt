@@ -45,9 +45,8 @@ Use the following Markdown format for your summary:
 [Analyze the video content and structure this section as appropriate for the specific video. This may include subsections on strategic insights, emerging trends, impact analysis, or other relevant topics. Use your judgment to determine the most effective way to present the information for executive decision-makers.]
 
 ### [Conclusions and Recommendations]
-- [Strategic recommendation 1 (short-term)]
-- [Strategic recommendation 2 (long-term)]
-- [Strategic recommendation 3]
-- [Strategic recommendation 4]
+- [Conclusions or Strategic recommendation 1]
+- [Conclusions or Strategic recommendation 2]
+- [Conclusions or Strategic recommendation 3]
 
 Based on the provided YouTube video transcript, generate an executive summary following these guidelines. Deliver a comprehensive, strategic overview that enables executives to grasp the video's core content, understand its strategic implications, and make informed decisions based on the insights provided.

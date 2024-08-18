@@ -14,7 +14,7 @@ load_dotenv()
 GROQ_API_KEY = os.environ.get('GROQ_API_KEY')
 OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
 
-def audio_to_text(audio_path, chunk_duration_seconds=600, service='groq'):
+def audio_to_text(audio_path, chunk_duration_seconds=600, service='groq', language='zh'):
     logger.info(f"Starting transcription process for audio: {audio_path}")
 
     if service == 'groq':
@@ -47,7 +47,7 @@ def audio_to_text(audio_path, chunk_duration_seconds=600, service='groq'):
                         file=(chunk_path, file.read()),
                         model="whisper-large-v3",
                         prompt="",
-                        language="zh",
+                        language=language,
                         temperature=0.0
                     )
                     transcripts.append(transcription.text)
@@ -57,7 +57,7 @@ def audio_to_text(audio_path, chunk_duration_seconds=600, service='groq'):
                         'file': file,
                         'model': 'whisper-1',
                         'response_format': 'text',
-                        'language': 'zh',
+                        'language': language,
                         'temperature': 0.0
                     }
                     transcription: Transcription = client.Audio.transcriptions.create(**params)

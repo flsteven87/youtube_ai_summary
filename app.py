@@ -5,6 +5,7 @@ from config.settings import TRANSCRIPT_PATH, SUMMARY_PATH
 import json
 from collections import OrderedDict
 import markdown
+from streamlit_extras.stylable_container import stylable_container
 
 st.set_page_config(layout="wide")
 
@@ -15,12 +16,12 @@ def read_file_content(file_path):
     except Exception as e:
         return f"讀取檔案時發生錯誤: {str(e)}"
 
-def save_video_info(video_name, youtube_url):
+def save_video_info(video_name, youtube_url, summary_method, summary_language, model):
     if 'processed_videos' not in st.session_state:
         st.session_state.processed_videos = OrderedDict()
     
-    video_name = video_name.rstrip('_')
-    st.session_state.processed_videos = OrderedDict([(video_name, youtube_url)] + list(st.session_state.processed_videos.items()))
+    video_key = f"{video_name}_{summary_method}_{summary_language}_{model}"
+    st.session_state.processed_videos = OrderedDict([(video_key, youtube_url)] + list(st.session_state.processed_videos.items()))
     
     with open('processed_videos.json', 'w') as f:
         json.dump(list(st.session_state.processed_videos.items()), f)
@@ -33,7 +34,17 @@ def load_video_info():
     else:
         st.session_state.processed_videos = OrderedDict()
 
-def analyze_video(youtube_url, summary_method, force_summarize=False):
+def create_progress_bar():
+    progress_bar = st.empty()
+    status_text = st.empty()
+    return progress_bar, status_text
+
+def update_progress(progress_bar, status_text, step, total_steps):
+    progress = int(step / total_steps * 100)
+    progress_bar.progress(progress)
+    status_text.text(f"進度: {progress}%")
+
+def analyze_video(youtube_url, summary_method, video_language, summary_language, model, force_summarize=False):
     try:
         processor = VideoProcessor(youtube_url)
         
@@ -42,22 +53,49 @@ def analyze_video(youtube_url, summary_method, force_summarize=False):
             st.warning("由於影片時長超過60分鐘，目前不支援。請選擇較短的影片。")
             return None
 
-        with st.spinner("正在分析影片..."):
+        with stylable_container(
+            key="progress_container",
+            css_styles="""
+                {
+                    background-color: #2b2b2b;
+                    padding: 20px;
+                    border-radius: 10px;
+                    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+                    overflow: hidden;
+                }
+            """
+        ):
+            st.markdown("### 分析")
+            progress_bar, status_text = create_progress_bar()
+            total_steps = 4  # 總步驟數
+            
+            update_progress(progress_bar, status_text, 1, total_steps)
+            st.info("正在下載並轉換影片...")
             processor.download_and_convert(force=False)
-            processor.transcribe(service='groq', force=False)
+            
+            update_progress(progress_bar, status_text, 2, total_steps)
+            st.info("正在轉錄影片...")
+            transcribe_language = 'zh' if video_language.startswith('zh') else video_language
+            processor.transcribe(service='groq', force=False, language=transcribe_language)
+            
+            update_progress(progress_bar, status_text, 3, total_steps)
+            st.info("正在保存轉錄文本...")
             processor.save_transcript()
-            processor.summarize(summary_method=summary_method, force=force_summarize)
-            processor.save_summary(summary_method)
+            
+            update_progress(progress_bar, status_text, 4, total_steps)
+            st.info("正在生成摘要...")
+            processor.summarize(summary_method=summary_method, force=force_summarize, language=summary_language, model=model)
+            processor.save_summary(summary_method, language=summary_language, model=model)
         
         st.success("影片分析成功完成！")
-        save_video_info(processor.video_name, youtube_url)
+        save_video_info(processor.video_name, youtube_url, summary_method, summary_language, model)
         return processor.video_name
     except Exception as e:
-        st.error(f"分析過程中發生錯誤: {str(e)}")
+        st.error(f"分析程中發生錯誤: {str(e)}")
         return None
 
-def display_video_content(video_name, summary_method):
-    summary_path = os.path.join(SUMMARY_PATH, f"{video_name}_{summary_method}.txt")
+def display_video_content(video_name, summary_method, language, model):
+    summary_path = os.path.join(SUMMARY_PATH, f"{video_name}_{summary_method}_{language}_{model}.txt")
     transcript_path = os.path.join(TRANSCRIPT_PATH, f"{video_name}.txt")
     
     st.subheader("影片摘要")
@@ -72,6 +110,150 @@ def display_video_content(video_name, summary_method):
     transcript_content = read_file_content(transcript_path)
     with st.expander("查看完整文字稿"):
         st.text_area("", transcript_content, height=300)
+
+def custom_language_selector(key_prefix, default_language='zh-tw'):
+    languages = {
+        "繁體中文": "zh-tw",
+        "简体中文": "zh-cn",
+        "English": "en",
+        "日本語": "ja",
+        "한국어": "ko",
+        "Français": "fr",
+        "Deutsch": "de",
+        "Español": "es"
+    }
+    
+    if f'{key_prefix}_selected_language' not in st.session_state:
+        st.session_state[f'{key_prefix}_selected_language'] = default_language
+
+    selected_language = st.selectbox(
+        f"選擇{key_prefix}語言",
+        options=list(languages.keys()),
+        format_func=lambda x: x,
+        key=f"{key_prefix}_language_selector"
+    )
+    
+    return languages[selected_language]
+
+def custom_model_selector():
+    models = {
+        "GPT-4o-mini": "gpt-4o-mini",
+        "GPT-4o": "gpt-4o",
+    }
+    
+    selected_model = st.selectbox(
+        "選擇模型",
+        options=list(models.keys()),
+        index=0,  # 設置 GPT-4o-mini 為預設選項
+        format_func=lambda x: x,
+        key="model_selector"
+    )
+    
+    return models[selected_model]
+
+def display_new_analysis_page():
+    _, center_col, _ = st.columns([1, 2, 1])
+    
+    with center_col:
+        st.title("YouTube Summarizer")
+        youtube_url = st.text_input(
+            "YouTube URL",
+            label_visibility="collapsed",
+            placeholder="輸入 YouTube 影片網址",
+            key="youtube_url"
+        )
+        
+        # 將語言選擇和模型選擇放在同一行
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            video_language = custom_language_selector("影片")
+        with col2:
+            summary_language = custom_language_selector("總結")
+        with col3:
+            selected_model = custom_model_selector()
+        
+        # st.markdown("### 選擇摘要類型")
+        button_styles = {
+            "brief": {"label": "簡短摘要", "color": "#4CAF50"},
+            "executive": {"label": "執行摘要", "color": "#2196F3"},
+            "detailed": {"label": "詳細摘要", "color": "#9C27B0"}
+        }
+        
+        col1, col2, col3 = st.columns(3)
+        
+        for method, style in button_styles.items():
+            col = [col1, col2, col3][list(button_styles.keys()).index(method)]
+            if col.button(
+                style["label"],
+                key=f"btn_{method}",
+                use_container_width=True,
+                help=f"生成{style['label']}"
+            ):
+                analyze_and_display(youtube_url, method, video_language, summary_language, selected_model)
+            
+            col.markdown(
+                f'<div style="width:100%;height:3px;background-color:{style["color"]};"></div>',
+                unsafe_allow_html=True
+            )
+        
+        st.session_state.force_summarize = False
+
+def analyze_and_display(youtube_url, summary_method, video_language, summary_language, model):
+    if youtube_url:
+        video_name = analyze_video(youtube_url, summary_method, video_language, summary_language, model, force_summarize=st.session_state.force_summarize)
+        if video_name:
+            st.success(f"已完成影片分析: {video_name}")
+            save_video_info(video_name, youtube_url, summary_method, summary_language, model)
+            st.session_state.current_page = "View Summary"
+            st.session_state.selected_video = f"{video_name}_{summary_method}_{summary_language}_{model}"
+            st.rerun()
+    else:
+        st.warning("請輸入有效的 YouTube 網址。")
+
+def get_summary_method_name(method):
+    method_names = {
+        "brief": "簡短摘要",
+        "executive": "執行摘要",
+        "detailed": "詳細摘要"
+    }
+    return method_names.get(method, "未知摘要方法")
+
+def set_selected_video(video_key):
+    st.session_state.current_page = "View Summary"
+    st.session_state.selected_video = video_key
+
+def display_summary_page():
+    if 'selected_video' in st.session_state and st.session_state.selected_video:
+        video_name, summary_method, summary_language, model = st.session_state.selected_video.rsplit('_', 3)
+        
+        st.title(f"{video_name}")
+        st.subheader(f"摘要方法: {get_summary_method_name(summary_method)}")
+        st.subheader(f"摘要語言: {get_language_name(summary_language)}")
+        st.subheader(f"使用模型: {model}")
+        
+        display_video_content(video_name, summary_method, summary_language, model)
+    else:
+        st.warning("請先選擇一個視頻進行分析。")
+
+def get_available_languages(video_name, summary_method):
+    available_languages = []
+    for language in ["zh-tw", "zh-cn", "en", "ja", "ko", "fr", "de", "es"]:
+        if os.path.exists(os.path.join(SUMMARY_PATH, f"{video_name}_{summary_method}_{language}.txt")):
+            available_languages.append(language)
+    return available_languages
+
+def get_language_name(language_code):
+    language_names = {
+        "zh-tw": "繁體中文",
+        "zh-cn": "简体中文",
+        "en": "English",
+        "ja": "日本語",
+        "ko": "한국어",
+        "fr": "Français",
+        "de": "Deutsch",
+        "es": "Español"
+    }
+    return language_names.get(language_code, language_code)
 
 def main():
     st.markdown("""
@@ -92,11 +274,53 @@ def main():
             margin-top: 0px !important;
             margin-bottom: 10px !important;
         }
+        .stProgress > div > div > div > div {
+            background-color: #4CAF50;
+        }
+        .stProgress {
+            background-color: #1e1e1e;
+        }
+        .stInfo, .stSuccess, .stError, .stWarning {
+            padding: 10px;
+            border-radius: 5px;
+            color: #e0e0e0;
+            margin-bottom: 10px;
+        }
+        .stInfo {
+            background-color: #1e3a5f;
+        }
+        .stSuccess {
+            background-color: #1e5f1e;
+        }
+        .stError {
+            background-color: #5f1e1e;
+        }
+        .stWarning {
+            background-color: #5f4b1e;
+        }
+        body {
+            color: #e0e0e0;
+        }
+        h1, h2, h3, h4, h5, h6 {
+            color: #ffffff;
+        }
+        .stTextInput > div > div > input {
+            color: #e0e0e0;
+            background-color: #3a3a3a;
+        }
+        .stSelectbox > div > div > select {
+            color: #e0e0e0;
+            background-color: #3a3a3a;
+        }
         </style>
     """, unsafe_allow_html=True)
     
     if 'processed_videos' not in st.session_state:
         load_video_info()
+    
+    # 初始化 current_page
+    if 'current_page' not in st.session_state:
+        st.session_state.current_page = "New Analysis"
     
     st.sidebar.title("Summaries")
     
@@ -113,17 +337,18 @@ def main():
         "detailed": "#9C27B0"
     }
     
-    for video_name, youtube_url in st.session_state.processed_videos.items():
-        summary_method = get_summary_method(video_name)
+    for video_key, youtube_url in st.session_state.processed_videos.items():
+        video_name, summary_method, summary_language, model = video_key.rsplit('_', 3)
         button_color = button_colors.get(summary_method, "#808080")
         
         if st.sidebar.button(
-            f"📺 {video_name}",
-            key=video_name,
+            f"📺 {video_name} ({get_summary_method_name(summary_method)} - {get_language_name(summary_language)} - {model})",
+            key=video_key,
             use_container_width=True,
             type="secondary",
-            help=f"查看 {video_name} 的摘要",
-            on_click=lambda vn=video_name: set_selected_video(vn)
+            help=f"查看 {video_name} 的 {get_summary_method_name(summary_method)} ({get_language_name(summary_language)})",
+            on_click=set_selected_video,
+            args=(video_key,)
         ):
             pass
         
@@ -132,96 +357,10 @@ def main():
             unsafe_allow_html=True
         )
 
-    if not hasattr(st.session_state, 'current_page'):
-        st.session_state.current_page = "New Analysis"
-    
     if st.session_state.current_page == "New Analysis":
         display_new_analysis_page()
     elif st.session_state.current_page == "View Summary":
         display_summary_page()
-
-def display_new_analysis_page():
-    
-    _, center_col, _ = st.columns([1, 2, 1])
-    
-    with center_col:
-        st.title("YouTube Summarizer")
-        youtube_url = st.text_input("", placeholder="輸入 YouTube 影片網址", key="youtube_url")
-        
-        button_styles = {
-            "brief": {"label": "簡短摘要", "color": "#4CAF50"},
-            "executive": {"label": "執行摘要", "color": "#2196F3"},
-            "detailed": {"label": "詳細摘要", "color": "#9C27B0"}
-        }
-        
-        col1, col2, col3 = st.columns(3)
-        
-        for method, style in button_styles.items():
-            col = [col1, col2, col3][list(button_styles.keys()).index(method)]
-            if col.button(
-                style["label"],
-                key=f"btn_{method}",
-                use_container_width=True,
-                help=f"生成{style['label']}"
-            ):
-                analyze_and_display(youtube_url, method)
-            
-            col.markdown(
-                f'<div style="width:100%;height:3px;background-color:{style["color"]};"></div>',
-                unsafe_allow_html=True
-            )
-        
-        force_summarize = st.checkbox("重新生成摘要")
-        st.session_state.force_summarize = force_summarize
-
-def analyze_and_display(youtube_url, summary_method):
-    if youtube_url:
-        video_name = analyze_video(youtube_url, summary_method, force_summarize=st.session_state.force_summarize)
-        if video_name:
-            st.success(f"已完成影片分析: {video_name}")
-            st.session_state.current_page = "View Summary"
-            st.session_state.selected_video = video_name
-            st.session_state.selected_summary_method = summary_method  # 保存所選的摘要方法
-            st.rerun()
-    else:
-        st.warning("請輸入有效的 YouTube 網址。")
-
-def get_summary_method(video_name):
-    for method in ["brief", "executive", "detailed"]:
-        if os.path.exists(os.path.join(SUMMARY_PATH, f"{video_name}_{method}.txt")):
-            return method
-    return "unknown"
-
-def set_selected_video(video_name):
-    st.session_state.current_page = "View Summary"
-    st.session_state.selected_video = video_name
-
-def display_summary_page():
-    if hasattr(st.session_state, 'selected_video'):
-        video_name = st.session_state.selected_video
-        st.title(f"{video_name}")
-        
-        # 使用保存的摘要方法作為預設值
-        default_method = st.session_state.get('selected_summary_method', 'brief')
-        
-        summary_method = st.selectbox(
-            "選擇摘要方法",
-            ["brief", "executive", "detailed"],
-            format_func=lambda x: {
-                "brief": "簡短摘要",
-                "executive": "執行摘要",
-                "detailed": "詳細摘要"
-            }.get(x, x),
-            key="summary_method_selector",
-            index=["brief", "executive", "detailed"].index(default_method)
-        )
-        
-        # 更新選擇的摘要方法
-        st.session_state.selected_summary_method = summary_method
-        
-        display_video_content(video_name, summary_method)
-    else:
-        st.info("請先選一個已分析的影片。")
 
 if __name__ == "__main__":
     main()

@@ -29,9 +29,11 @@ if not OPENAI_API_KEY:
 client = OpenAI()
 
 class GPT4Summarizer:
-    def __init__(self, summary_method):
-        logger.info(f"Initializing GPT-4 Summarizer with method: {summary_method}")
+    def __init__(self, summary_method, language='zh', model="gpt-4o-mini"):
+        logger.info(f"Initializing GPT-4 Summarizer with method: {summary_method}, language: {language}, and model: {model}")
         self.summary_method = summary_method
+        self.language = language
+        self.model = model
         self.user_prompt_path = f"src/prompts/{summary_method}_summary.txt"
         self.load_user_prompt()
 
@@ -49,14 +51,14 @@ class GPT4Summarizer:
             raise
 
     def summarize_with_gpt4(self, transcript):
-        logger.info("Starting GPT-4 summarization process")
+        logger.info(f"Starting summarization process with {self.model}")
         logger.info(f"Transcript length: {len(transcript)} characters")
-        language_prompt = "請你將你的總結，以繁體中文 language:zh-tw\n 輸出"
+        language_prompt = f"請你將你的總結，以 {self.language} 語言輸出"
 
         try:
             logger.info("Sending request to OpenAI API")
             response = client.chat.completions.create(
-                model="gpt-4o-mini",
+                model=self.model,
                 messages=[
                     {"role": "system", "content": "You are a helpful assistant."},
                     {"role": "user", "content": self.user_prompt + language_prompt + "transcript:" + transcript},    
@@ -70,7 +72,7 @@ class GPT4Summarizer:
             return summary
 
         except Exception as e:
-            logger.error(f"Error during GPT-4 summarization: {str(e)}")
+            logger.error(f"Error during summarization: {str(e)}")
             raise
 
 def summarize_text(text, method="executive"):

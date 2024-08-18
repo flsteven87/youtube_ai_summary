@@ -60,7 +60,7 @@ class VideoProcessor:
             self.audio_path = download_audio(self.url, AUDIO_PATH, self.video_name)
             print(f"Audio downloaded and saved to: {self.audio_path}")
 
-    def transcribe(self, service, force=False):
+    def transcribe(self, service, language='zh', force=False):
         if not self.audio_path:
             raise ValueError("Audio hasn't been downloaded yet. Call download_and_convert() first.")
         
@@ -71,23 +71,23 @@ class VideoProcessor:
                 self.transcript = f.read()
             print("Existing transcript loaded.")
         else:
-            self.transcript = audio_to_text(self.audio_path, service=service)
+            self.transcript = audio_to_text(self.audio_path, service=service, language=language)
             print("Audio transcription completed.")
 
-    def summarize(self, summary_method="executive", force=False):
+    def summarize(self, summary_method="executive", force=False, language='zh', model="gpt-4"):
         if not self.transcript:
             raise ValueError("Transcript hasn't been generated yet. Call transcribe() first.")
         
-        expected_summary_path = os.path.join(SUMMARY_PATH, f"{self.video_name}_{summary_method}.txt")
+        expected_summary_path = os.path.join(SUMMARY_PATH, f"{self.video_name}_{summary_method}_{language}_{model}.txt")
         
         if not force and os.path.exists(expected_summary_path):
             with open(expected_summary_path, 'r', encoding='utf-8') as f:
                 self.summary = f.read()
-            print(f"Existing {summary_method} summary loaded.")
+            print(f"Existing {summary_method} summary in {language} using {model} loaded.")
         else:
-            summarizer = GPT4Summarizer(summary_method)
+            summarizer = GPT4Summarizer(summary_method, language, model)
             self.summary = summarizer.summarize_with_gpt4(self.transcript)
-            print(f"{summary_method.capitalize()} summarization completed.")
+            print(f"{summary_method.capitalize()} summarization in {language} using {model} completed.")
 
     def save_transcript(self):
         if not self.transcript:
@@ -99,11 +99,11 @@ class VideoProcessor:
             f.write(self.transcript)
         print(f"Transcript saved to: {output_path}")
 
-    def save_summary(self, summary_method):
+    def save_summary(self, summary_method, language, model):
         if not self.summary:
             raise ValueError("Summary hasn't been generated yet. Call summarize() first.")
         os.makedirs(SUMMARY_PATH, exist_ok=True)
-        filename = f"{self.video_name}_{summary_method}.txt"
+        filename = f"{self.video_name}_{summary_method}_{language}_{model}.txt"
         output_path = os.path.join(SUMMARY_PATH, filename)
         with open(output_path, 'w', encoding='utf-8') as f:
             f.write(self.summary)
