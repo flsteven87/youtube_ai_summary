@@ -9,6 +9,10 @@ from streamlit_extras.stylable_container import stylable_container
 
 st.set_page_config(layout="wide")
 
+# 使用 Streamlit secrets
+OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
+GROQ_API_KEY = st.secrets["GROQ_API_KEY"]
+
 def read_file_content(file_path):
     try:
         with open(file_path, 'r', encoding='utf-8') as file:

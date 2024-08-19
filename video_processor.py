@@ -1,6 +1,5 @@
 import os
 import re
-from dotenv import load_dotenv
 from src.downloader import download_audio
 from src.transcriber import audio_to_text
 from src.summarizer import GPT4Summarizer

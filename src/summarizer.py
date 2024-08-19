@@ -1,7 +1,7 @@
 import os
 import logging
 from openai import OpenAI
-from dotenv import load_dotenv
+import streamlit as st
 
 # 設置日誌記錄
 logger = logging.getLogger(__name__)
@@ -18,12 +18,11 @@ else:
     # 如果已經有處理器，確保日誌級別是正確的
     logger.setLevel(logging.INFO)
 
-# 載入環境變量
-load_dotenv()
-OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
+# 使用 Streamlit secrets
+OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
 
 if not OPENAI_API_KEY:
-    logger.error("OPENAI_API_KEY not found in environment variables.")
+    logger.error("OPENAI_API_KEY not found in Streamlit secrets.")
     raise ValueError("OPENAI_API_KEY is not set")
 
 client = OpenAI()
@@ -90,6 +89,6 @@ def summarize_text(text, method="executive"):
 
 if __name__ == "__main__":
     # 測試代碼
-    test_text = "這是一個測試文本，用於演示摘要功能。" * 50
+    test_text = "這是一個測試文本，用於演示��要功能。" * 50
     summary = summarize_text(test_text, method="executive")
     logger.info(f"Summary preview: {summary[:200]}...")  # 顯示前200個字符作為預覽

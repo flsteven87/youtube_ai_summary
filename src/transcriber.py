@@ -3,28 +3,28 @@ import logging
 from groq import Groq
 from config.settings import AUDIO_PATH
 from src.audio_splitter import split_audio
-from dotenv import load_dotenv
+import streamlit as st
 from openai import OpenAI
 from openai.types.audio import Transcription
 
 # 設置日誌記錄
 logger = logging.getLogger(__name__)
 
-load_dotenv()
-GROQ_API_KEY = os.environ.get('GROQ_API_KEY')
-OPENAI_API_KEY = os.environ.get('OPENAI_API_KEY')
+# 使用 Streamlit secrets
+GROQ_API_KEY = st.secrets["GROQ_API_KEY"]
+OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
 
 def audio_to_text(audio_path, chunk_duration_seconds=600, service='groq', language='zh'):
     logger.info(f"Starting transcription process for audio: {audio_path}")
 
     if service == 'groq':
         if not GROQ_API_KEY:
-            logger.error("GROQ_API_KEY not found in environment variables.")
+            logger.error("GROQ_API_KEY not found in Streamlit secrets.")
             raise ValueError("GROQ_API_KEY is not set")
         client = Groq(api_key=GROQ_API_KEY)
     elif service == 'openai':
         if not OPENAI_API_KEY:
-            logger.error("OPENAI_API_KEY not found in environment variables.")
+            logger.error("OPENAI_API_KEY not found in Streamlit secrets.")
             raise ValueError("OPENAI_API_KEY is not set")
         client = OpenAI(api_key=OPENAI_API_KEY)
     else:
@@ -81,4 +81,4 @@ if __name__ == "__main__":
     # 測試代碼
     test_audio_path = "path/to/your/test/audio.mp3"
     transcript = audio_to_text(test_audio_path, service='groq')  # 可以選擇 'groq' 或 'openai'
-    logger.info(f"Transcript preview: {transcript[:500]}...")  # 顯示前500個字符作為預覽
+    logger.info(f"Transcript preview: {transcript[:500]}...")  # 顯示��500個字符作為預覽
