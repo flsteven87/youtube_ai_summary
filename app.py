@@ -35,14 +35,16 @@ def load_video_info():
         st.session_state.processed_videos = OrderedDict()
 
 def create_progress_bar():
-    progress_bar = st.empty()
-    status_text = st.empty()
+    progress_container = st.container()
+    with progress_container:
+        progress_bar = st.progress(0)
+        status_text = st.empty()
     return progress_bar, status_text
 
 def update_progress(progress_bar, status_text, step, total_steps):
     progress = int(step / total_steps * 100)
     progress_bar.progress(progress)
-    status_text.text(f"進度: {progress}%")
+    status_text.text(f"總體進度: {progress}%")
 
 def analyze_video(youtube_url, summary_method, video_language, summary_language, model, force_summarize=False):
     try:
@@ -65,25 +67,25 @@ def analyze_video(youtube_url, summary_method, video_language, summary_language,
                 }
             """
         ):
-            st.markdown("### 分析")
+            st.markdown("### 分析進度")
             progress_bar, status_text = create_progress_bar()
             total_steps = 4  # 總步驟數
             
+            # 下載並轉換影片
             update_progress(progress_bar, status_text, 1, total_steps)
-            st.info("正在下載並轉換影片...")
             processor.download_and_convert(force=False)
             
+            # 轉錄影片
             update_progress(progress_bar, status_text, 2, total_steps)
-            st.info("正在轉錄影片...")
             transcribe_language = 'zh' if video_language.startswith('zh') else video_language
             processor.transcribe(service='groq', force=False, language=transcribe_language)
             
+            # 保存轉錄文本
             update_progress(progress_bar, status_text, 3, total_steps)
-            st.info("正在保存轉錄文本...")
             processor.save_transcript()
             
+            # 生成摘要
             update_progress(progress_bar, status_text, 4, total_steps)
-            st.info("正在生成摘要...")
             processor.summarize(summary_method=summary_method, force=force_summarize, language=summary_language, model=model)
             processor.save_summary(summary_method, language=summary_language, model=model)
         
@@ -91,7 +93,7 @@ def analyze_video(youtube_url, summary_method, video_language, summary_language,
         save_video_info(processor.video_name, youtube_url, summary_method, summary_language, model)
         return processor.video_name
     except Exception as e:
-        st.error(f"分析程中發生錯誤: {str(e)}")
+        st.error(f"分析過程中發生錯誤: {str(e)}")
         return None
 
 def display_video_content(video_name, summary_method, language, model):
@@ -279,6 +281,20 @@ def main():
         }
         .stProgress {
             background-color: #1e1e1e;
+            height: 20px;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .stProgress > div {
+            height: 100%;
+            width: 100%;
+            background-color: #4CAF50 !important;
+        }
+        .stProgress > div > div {
+            height: 100%;
+        }
+        .stProgress > div > div > div {
+            height: 100%;
         }
         .stInfo, .stSuccess, .stError, .stWarning {
             padding: 10px;
