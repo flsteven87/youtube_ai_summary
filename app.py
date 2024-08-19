@@ -50,7 +50,7 @@ def update_progress(progress_bar, status_text, step, total_steps):
     progress_bar.progress(progress)
     status_text.text(f"總體進度: {progress}%")
 
-def analyze_video(youtube_url, summary_method, video_language, summary_language, model, force_summarize=False):
+def analyze_video(youtube_url, summary_method, video_language, summary_language, model, user_api_key=None, force_summarize=False):
     try:
         processor = VideoProcessor(youtube_url)
         
@@ -90,7 +90,10 @@ def analyze_video(youtube_url, summary_method, video_language, summary_language,
             
             # 生成摘要
             update_progress(progress_bar, status_text, 4, total_steps)
-            processor.summarize(summary_method=summary_method, force=force_summarize, language=summary_language, model=model)
+            if model == "gpt-4o" and user_api_key:
+                processor.summarize(summary_method=summary_method, force=force_summarize, language=summary_language, model=model, api_key=user_api_key)
+            else:
+                processor.summarize(summary_method=summary_method, force=force_summarize, language=summary_language, model=model)
             processor.save_summary(summary_method, language=summary_language, model=model)
         
         st.success("影片分析成功完成！")
@@ -155,7 +158,11 @@ def custom_model_selector():
         key="model_selector"
     )
     
-    return models[selected_model]
+    if models[selected_model] == "gpt-4o":
+        user_api_key = st.text_input("請輸入您的 OpenAI API Key", type="password")
+        return models[selected_model], user_api_key
+    else:
+        return models[selected_model], None
 
 def display_new_analysis_page():
     _, center_col, _ = st.columns([1, 2, 1])
@@ -176,7 +183,7 @@ def display_new_analysis_page():
         with col2:
             summary_language = custom_language_selector("總結")
         with col3:
-            selected_model = custom_model_selector()
+            selected_model, user_api_key = custom_model_selector()
         
         # st.markdown("### 選擇摘要類型")
         button_styles = {
@@ -195,7 +202,7 @@ def display_new_analysis_page():
                 use_container_width=True,
                 help=f"生成{style['label']}"
             ):
-                analyze_and_display(youtube_url, method, video_language, summary_language, selected_model)
+                analyze_and_display(youtube_url, method, video_language, summary_language, selected_model, user_api_key)
             
             col.markdown(
                 f'<div style="width:100%;height:3px;background-color:{style["color"]};"></div>',
@@ -204,9 +211,13 @@ def display_new_analysis_page():
         
         st.session_state.force_summarize = False
 
-def analyze_and_display(youtube_url, summary_method, video_language, summary_language, model):
+def analyze_and_display(youtube_url, summary_method, video_language, summary_language, model, user_api_key):
     if youtube_url:
-        video_name = analyze_video(youtube_url, summary_method, video_language, summary_language, model, force_summarize=st.session_state.force_summarize)
+        if model == "gpt-4o" and not user_api_key:
+            st.warning("請輸入您的 OpenAI API Key 以使用 GPT-4o 模型。")
+            return
+        
+        video_name = analyze_video(youtube_url, summary_method, video_language, summary_language, model, user_api_key, force_summarize=st.session_state.force_summarize)
         if video_name:
             st.success(f"已完成影片分析: {video_name}")
             save_video_info(video_name, youtube_url, summary_method, summary_language, model)

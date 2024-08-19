@@ -8,8 +8,6 @@ from urllib.parse import urlparse, parse_qs
 import requests
 import yt_dlp
 
-load_dotenv()
-
 class VideoProcessor:
     def __init__(self, url):
         self.url = url
