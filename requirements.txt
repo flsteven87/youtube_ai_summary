@@ -6,3 +6,4 @@ Requests==2.32.3
 streamlit==1.37.1
 streamlit_extras==0.4.7
 yt_dlp==2024.8.6
+pytube==15.0.0

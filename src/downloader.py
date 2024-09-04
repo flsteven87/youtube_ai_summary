@@ -2,6 +2,10 @@ import yt_dlp
 import os
 import logging
 from config.settings import AUDIO_PATH
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +23,8 @@ def download_audio(url, audio_path=AUDIO_PATH, video_name=None):
         'logger': logger,
         'progress_hooks': [logging_hook],
         'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
-        'cookiefile': 'cookies.txt',  # Ensure you have a valid cookies.txt file in the working directory
+        'username': os.getenv('YOUTUBE_USERNAME'),
+        'password': os.getenv('YOUTUBE_PASSWORD'),
     }
 
     try:
