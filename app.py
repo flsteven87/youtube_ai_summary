@@ -7,6 +7,9 @@ from collections import OrderedDict
 import markdown
 from streamlit_extras.stylable_container import stylable_container
 
+# 設置 Streamlit 的端口
+port = int(os.environ.get("PORT", 5000))
+
 st.set_page_config(layout="wide")
 
 # 使用 Streamlit secrets
