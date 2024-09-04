@@ -106,14 +106,18 @@ class VideoProcessor:
             f.write(self.summary)
         print(f"Summary saved to: {output_path}")
 
-def main():
-    video_url = "https://www.youtube.com/watch?v=9pGwSCmCYAE&ab_channel=%E4%B8%9C%E4%BA%AC%E8%80%81%E8%90%A7"
-    processor = VideoProcessor(video_url)
-    processor.download_and_convert()
-    processor.transcribe(service='groq')
-    processor.save_transcript()
-    processor.summarize(method="gpt-4")
-    processor.save_summary()
+# 確保 VideoProcessor 類被導出
+__all__ = ['VideoProcessor']
 
+# 如果需要，可以保留 main 函數，但將其放在 if __name__ == '__main__': 塊中
 if __name__ == '__main__':
+    def main():
+        video_url = "https://www.youtube.com/watch?v=9pGwSCmCYAE&ab_channel=%E4%B8%9C%E4%BA%AC%E8%80%81%E8%90%A7"
+        processor = VideoProcessor(video_url)
+        processor.download_and_convert()
+        processor.transcribe(service='groq')
+        processor.save_transcript()
+        processor.summarize(summary_method="executive", language="zh", model="gpt-4")
+        processor.save_summary(summary_method="executive", language="zh", model="gpt-4")
+
     main()
