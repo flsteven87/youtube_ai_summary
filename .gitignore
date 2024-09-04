@@ -162,7 +162,9 @@ cython_debug/
 #.idea/
 
 # Data
-data/
+data/audio/*
+data/video/*
+data/transcripts/*
 
 # Processed Videos
 processed_videos.json
