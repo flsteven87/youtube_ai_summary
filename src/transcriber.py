@@ -11,8 +11,11 @@ from openai.types.audio import Transcription
 logger = logging.getLogger(__name__)
 
 # 使用 Streamlit secrets
-GROQ_API_KEY = st.secrets["GROQ_API_KEY"]
-OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
+# GROQ_API_KEY = st.secrets["GROQ_API_KEY"]
+# OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
+
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 
 def audio_to_text(audio_path, chunk_duration_seconds=600, service='groq', language='zh'):
     logger.info(f"Starting transcription process for audio: {audio_path}")

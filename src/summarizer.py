@@ -19,7 +19,10 @@ else:
     logger.setLevel(logging.INFO)
 
 # 使用 Streamlit secrets
-OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
+# OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
+
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 
 if not OPENAI_API_KEY:
     logger.error("OPENAI_API_KEY not found in Streamlit secrets.")
