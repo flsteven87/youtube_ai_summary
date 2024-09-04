@@ -163,7 +163,7 @@ cython_debug/
 
 # Data
 data/audio/*
-data/video/*
+data/summaries/*
 data/transcripts/*
 
 # Processed Videos

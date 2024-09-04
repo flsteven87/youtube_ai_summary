@@ -13,8 +13,11 @@ port = int(os.environ.get("PORT", 5000))
 st.set_page_config(layout="wide")
 
 # 使用 Streamlit secrets
-OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
-GROQ_API_KEY = st.secrets["GROQ_API_KEY"]
+# OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
+# GROQ_API_KEY = st.secrets["GROQ_API_KEY"]
+
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 
 def read_file_content(file_path):
     try:
@@ -188,29 +191,19 @@ def display_new_analysis_page():
         with col3:
             selected_model, user_api_key = custom_model_selector()
         
-        # st.markdown("### 選擇摘要類型")
-        button_styles = {
-            "brief": {"label": "簡短摘要", "color": "#4CAF50"},
-            "executive": {"label": "執行摘要", "color": "#2196F3"},
-            "detailed": {"label": "詳細摘要", "color": "#9C27B0"}
-        }
+        # 只保留詳細摘要按鈕
+        if st.button(
+            "生成詳細摘要",
+            key="btn_detailed",
+            use_container_width=True,
+            help="生成詳細摘要"
+        ):
+            analyze_and_display(youtube_url, "detailed", video_language, summary_language, selected_model, user_api_key)
         
-        col1, col2, col3 = st.columns(3)
-        
-        for method, style in button_styles.items():
-            col = [col1, col2, col3][list(button_styles.keys()).index(method)]
-            if col.button(
-                style["label"],
-                key=f"btn_{method}",
-                use_container_width=True,
-                help=f"生成{style['label']}"
-            ):
-                analyze_and_display(youtube_url, method, video_language, summary_language, selected_model, user_api_key)
-            
-            col.markdown(
-                f'<div style="width:100%;height:3px;background-color:{style["color"]};"></div>',
-                unsafe_allow_html=True
-            )
+        st.markdown(
+            '<div style="width:100%;height:3px;background-color:#9C27B0;"></div>',
+            unsafe_allow_html=True
+        )
         
         st.session_state.force_summarize = False
 
@@ -231,12 +224,7 @@ def analyze_and_display(youtube_url, summary_method, video_language, summary_lan
         st.warning("請輸入有效的 YouTube 網址。")
 
 def get_summary_method_name(method):
-    method_names = {
-        "brief": "簡短摘要",
-        "executive": "執行摘要",
-        "detailed": "詳細摘要"
-    }
-    return method_names.get(method, "未知摘要方法")
+    return "詳細摘要"
 
 def set_selected_video(video_key):
     st.session_state.current_page = "View Summary"
@@ -366,8 +354,6 @@ def main():
     st.sidebar.subheader("已分析的影片")
     
     button_colors = {
-        "brief": "#4CAF50",
-        "executive": "#2196F3",
         "detailed": "#9C27B0"
     }
     
