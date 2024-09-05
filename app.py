@@ -384,3 +384,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+    # heroku ps:scale web=0 -a youtube-ai-summary
